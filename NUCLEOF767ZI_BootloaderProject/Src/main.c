@@ -43,7 +43,7 @@ static uint8_t bl_rx_buffer[BL_RX_LEN];
 static uint16_t preamble = 0x3F3F;
 
 static void (*boot_loader_operations[9]) (uint8_t * command_packet, comms_device_t commsDevice, uint32_t length) = {0, bl_get_version,
-		bl_get_help, bl_get_chip_id, bl_get_rdp_status, bl_go_to_addr, bl_flash_erase, bl_mem_write, bl_enable_read_write_protect};
+		bl_get_help, bl_get_chip_id, bl_get_rdp_status, bl_go_to_app_address, bl_flash_erase, bl_mem_write, bl_enable_read_write_protect};
 
 
 int main(void)
@@ -121,13 +121,8 @@ static bool check_for_user_bootloader_mode (void) {
 }
 
 static void jump_to_application (void) {
-	turn_off_GREEN_LED_PORTB();
-	uint32_t app_msp_base = *(volatile uint32_t *)FLASH_APP_REGION_START; //MSP value stored at 0x08008000 in flash
-	__set_MSP(app_msp_base);
-	SCB->VTOR = FLASH_APP_REGION_START;
-	uint32_t reset_handler_ptr = *(volatile uint32_t *)(FLASH_APP_REGION_START+4);
-	void (*app_reset_handler_function) (void) = (void (*) (void))reset_handler_ptr;
-	app_reset_handler_function();
+	//MSP value stored at 0x08008000 in flash
+	run_application (FLASH_APP_REGION_START);
 }
 
 static void timer_setup (void) {
