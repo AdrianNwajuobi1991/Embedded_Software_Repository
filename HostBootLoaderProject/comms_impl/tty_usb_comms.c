@@ -66,7 +66,7 @@ static void Comms_Device_Configure(comms_device_t comms_device, void * args) {
 		printf("comms device init failure. Exiting now.\n");
 		exit(DEVICE_INIT_FAILURE);
 	}else{
-		tcflush(comms_device->file_desc, TCIOFLUSH);
+		//tcflush(comms_device->file_desc, TCIOFLUSH);
 		ttyUSBConfigure(comms_device);
 		printf("%s\n",comms_device->device_path);
 	}
@@ -94,7 +94,7 @@ static void ttyUSBConfigure(comms_device_t device) {
 	device->ttyUSB.c_iflag &= ~(IGNBRK|BRKINT|PARMRK|ISTRIP|INLCR|IGNCR|ICRNL); // Disable any special handling of received bytes
 	device->ttyUSB.c_oflag &= ~OPOST; // Prevent special interpretation of output bytes (e.g. newline chars)
 	device->ttyUSB.c_oflag &= ~ONLCR; // Prevent conversion of newline to carriage return/line feed
-	device->ttyUSB.c_cc[VTIME] = 100;    // Wait for up to 1s (10 deciseconds), returning as soon as any data is received.
+	device->ttyUSB.c_cc[VTIME] = 220;    // Wait for up to 1s (10 deciseconds), returning as soon as any data is received.
 	device->ttyUSB.c_cc[VMIN] = 0;
 	setCommsTrancieverSpeed(device);
 }
@@ -131,6 +131,7 @@ static void setCommsTrancieverSpeed(comms_device_t device) {
 void Comms_Device_SendPacket(comms_device_t comms_device, void * data, uint32_t numBytes) {
 	hostToProtocolEndiannessConvert(data, numBytes);
 	write(comms_device->file_desc, data, numBytes);
+	hostToProtocolEndiannessConvert(data, numBytes);
 }
 
 void Comms_Device_RecvPacket(comms_device_t comms_device, void * recvPacketBuffer, uint32_t numBytes) {

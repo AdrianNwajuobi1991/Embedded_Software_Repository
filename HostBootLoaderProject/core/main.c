@@ -12,6 +12,7 @@
 #include <stdbool.h>
 #include "comms_device.h"
 #include "BootProtocolDefs.h"
+#include <string.h>
 
 
 
@@ -24,11 +25,11 @@ static uint8_t * codePackage = NULL;
 
 static comms_device_t commsDevice;
 
-static void convert_file_to_array(char * filePath, uint8_t ** codePackage, unsigned long * fileSize);
+static void convert_file_to_array(char * filePath, uint8_t ** codePackage, uint32_t * fileSize);
 
 static void setup_comms_device(comms_device_t * device, CommsDeviceOptions * options);
 
-static unsigned long fileLength = 0;
+static uint32_t fileLength = 0;
 
 static void exitHostBootloader (void);
 
@@ -37,7 +38,7 @@ static uint16_t preamble = 0x3F3F;
 static void boot_loader_sequencer (char * argv[]);
 static void boot_loader_setup(char * firmwareFilePathString,
 		uint8_t ** codePackagePtr,
-		unsigned long * fileSizeBytes,
+		uint32_t * fileSizeBytes,
 		int32_t baudRate, char * deviceFile,
 		CommsDeviceOptions * commsOpts);
 
@@ -49,13 +50,14 @@ static void bl_get_chip_id (comms_device_t commsDevice);
 static void bl_get_rdp_status (comms_device_t commsDevice);
 static void bl_go_to_app_address (comms_device_t commsDevice);
 static void bl_flash_erase (comms_device_t commsDevice);
+static void bl_mem_write (comms_device_t commsDevice);
 
 static bool run_preamble_sequence (comms_device_t commsDevice);
 static bool run_protocol_packet_sequence (comms_device_t commsDevice, uint8_t * packet,
 		uint32_t packet_size, uint8_t * crcResponse, uint32_t crcResponseSize);
 
-static void (*boot_loader_operations[7]) (comms_device_t commsDevice) = {0, host_bl_get_version, host_bl_get_help,
-		bl_get_chip_id, bl_get_rdp_status, bl_go_to_app_address, bl_flash_erase};
+static void (*boot_loader_operations[8]) (comms_device_t commsDevice) = {0, host_bl_get_version, host_bl_get_help,
+		bl_get_chip_id, bl_get_rdp_status, bl_go_to_app_address, bl_flash_erase, bl_mem_write};
 
 
 int main (int argc, char * argv[]) {
@@ -76,7 +78,7 @@ static void boot_loader_sequencer (char * argv[]) {
 
 static void boot_loader_setup(char * firmwareFilePathString,
 		uint8_t ** codePackagePtr,
-		unsigned long * fileSizeBytes,
+		uint32_t * fileSizeBytes,
 		int32_t baudRate, char * deviceFile,
 		CommsDeviceOptions * commsOpts) {
 	printf("boot loader client setup is beginning.\n");
@@ -202,22 +204,93 @@ static void bl_go_to_app_address (comms_device_t commsDevice) {
 }
 
 static void bl_flash_erase (comms_device_t commsDevice) {
-	uint8_t bl_flash_erase_pkt[8];
+	uint8_t bl_flash_erase_pkt[7];
 	uint8_t crcResponse[2];
 	uint8_t commandStatus = 0;
-	bl_flash_erase_pkt[0] = 7;
+	bl_flash_erase_pkt[0] = 6;
 	bl_flash_erase_pkt[1] = BL_FLASH_ERASE;
-	bl_flash_erase_pkt[2] = 2;
-	bl_flash_erase_pkt[3] = 4;
-	uint32_t * crcPortionPtr = (uint32_t *)(bl_flash_erase_pkt+4);
+	bl_flash_erase_pkt[2] = 1;
+	uint32_t * crcPortionPtr = (uint32_t *)(bl_flash_erase_pkt+3);
 	*crcPortionPtr = 0xABDE7C98;
 	if (run_preamble_sequence(commsDevice) == true) {
 		printf("The ACK_PREAMBLE Response host_bl_flash_erase has been read here.\n");
-		if (run_protocol_packet_sequence(commsDevice, bl_flash_erase_pkt, 8, crcResponse, 2) == true) {
+		if (run_protocol_packet_sequence(commsDevice, bl_flash_erase_pkt, 7, crcResponse, 2) == true) {
 			printf("The CRC Response host_bl_flash_erase has been read here.\n");
 			//receive the app go-to-address status
 			Comms_Device_RecvPacket(commsDevice, &commandStatus, crcResponse[1]);
 			printf("The flash-erase command execution status is: %x\n", commandStatus);
+		}
+	}
+}
+
+static void bl_mem_write (comms_device_t commsDevice) {
+	uint8_t bl_flash_erase_pkt[6];
+	uint8_t flash_write_acknowledge = 0xFF;
+	uint8_t crcResponse[2];
+	uint8_t commandStatus = 0;
+	bl_flash_erase_pkt[0] = 5;
+	bl_flash_erase_pkt[1] = BL_FLASH_WRITE;
+	uint32_t * crcPortionPtr = (uint32_t *)(bl_flash_erase_pkt+2);
+	*crcPortionPtr = 0xABDE7C98;
+	if (run_preamble_sequence(commsDevice) == true) {
+		printf("The ACK_PREAMBLE Response host_bl_mem_write has been read here.\n");
+		if (run_protocol_packet_sequence(commsDevice, bl_flash_erase_pkt, 6, crcResponse, 2) == true) {
+			printf("The CRC Response host_bl_mem_write has been read here.\n");
+			uint8_t code_payload_packet[CODE_PACKET_SIZE];
+			uint8_t * codePackagePtr = codePackage;
+			uint32_t number_of_code_payloads = 0;
+			uint32_t current_flash_memory_pointer = 0;
+
+			printf("The total codefile size to be sent is %d bytes.\n", fileLength);
+
+			if (fileLength % CODE_PACKET_SIZE == 0) {
+				number_of_code_payloads = fileLength / CODE_PACKET_SIZE;
+			}
+
+			if (fileLength % CODE_PACKET_SIZE != 0) {
+				number_of_code_payloads = (fileLength / CODE_PACKET_SIZE) + 1;
+			}
+			printf("the total number of code payload packets is: %d.\n", number_of_code_payloads);
+			/* send the number of code payload packets */
+			Comms_Device_SendPacket(commsDevice, &number_of_code_payloads, sizeof(number_of_code_payloads));
+			/* receive flash write acknowledge message */
+			Comms_Device_RecvPacket(commsDevice, &flash_write_acknowledge, sizeof(flash_write_acknowledge));
+			/* receive starting flash write address from peer. */
+			Comms_Device_RecvPacket(commsDevice, &current_flash_memory_pointer, sizeof(current_flash_memory_pointer));
+			printf("The starting flash memory pointer value is: %x.\n", current_flash_memory_pointer);
+			if (flash_write_acknowledge == 0x33) {
+				printf("received flash write acknowledge message.\n");
+			}else{
+				printf("did not receive flash write acknowledge message.\n");
+			}
+			memset(code_payload_packet, 0, CODE_PACKET_SIZE);
+			while (number_of_code_payloads > 0) {
+				if (number_of_code_payloads > 1) {
+					memcpy(code_payload_packet, (const void *) codePackagePtr, CODE_PACKET_SIZE);
+					codePackagePtr += CODE_PACKET_SIZE;
+				}
+				if (number_of_code_payloads == 1) {
+					memcpy(code_payload_packet, (const void *) codePackagePtr, fileLength % CODE_PACKET_SIZE);
+					codePackagePtr += fileLength % CODE_PACKET_SIZE;
+				}
+				Comms_Device_SendPacket(commsDevice, code_payload_packet, sizeof(code_payload_packet));
+				printf("sent code payload packet number: %d.\n", number_of_code_payloads);
+				/* receive flash write acknowledge message */
+				flash_write_acknowledge = 0xFF;
+				current_flash_memory_pointer = 0xFFFFFFFF;
+				Comms_Device_RecvPacket(commsDevice, &flash_write_acknowledge, sizeof(flash_write_acknowledge));
+				if (flash_write_acknowledge == 0x33) {
+					printf("received flash write acknowledge message for code payload packet number: %d.\n", number_of_code_payloads);
+				}
+				/* receive the current flash memory pointer and log it */
+				Comms_Device_RecvPacket(commsDevice, &current_flash_memory_pointer, sizeof(current_flash_memory_pointer));
+				printf("The updated flash memory pointer value is: %x.\n", current_flash_memory_pointer);
+				number_of_code_payloads -= 1;
+				memset(code_payload_packet, 0, CODE_PACKET_SIZE);;
+			}
+			//receive the flash write status
+			Comms_Device_RecvPacket(commsDevice, &commandStatus, crcResponse[1]);
+			printf("The flash-write command execution status is: %x\n", commandStatus);
 		}
 	}
 }
@@ -263,7 +336,7 @@ static void setup_comms_device(comms_device_t * device, CommsDeviceOptions * opt
 	*device = Comms_Init(INSTANCE_0, options);
 }
 
-static void convert_file_to_array(char * filePath, uint8_t ** codePackage, unsigned long * fileSize) {
+static void convert_file_to_array(char * filePath, uint8_t ** codePackage, uint32_t * fileSize) {
 	FILE *fileptr;
 	unsigned long filelen;
 
@@ -285,5 +358,5 @@ static void convert_file_to_array(char * filePath, uint8_t ** codePackage, unsig
 	fread(*codePackage, filelen, 1, fileptr); // Read in the entire file
 	fclose(fileptr); // Close the file
 	printf("The firmware codefile is loaded.\n");
-	*fileSize = filelen;
+	*fileSize = (uint32_t)filelen;
 }
