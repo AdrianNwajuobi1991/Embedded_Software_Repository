@@ -31,6 +31,7 @@
 #include "stm32f7xx.h"
 #include "TIMER_Driver.h"
 #include "timer_input_capture_integration_test.h"
+#include "flash_operations_integration_tests.h"
 
 
 int main(void)
@@ -39,10 +40,11 @@ int main(void)
 	//setup_basic_timebase_integration_test_no_interrupts();
 	//setup_basic_timebase_integration_test_interrupt_enabled();
 	//setup_timers_integration_test();
-	setup_input_capture();
+	//setup_input_capture();
 	//setup_dma_integration_test();
 	//setup_usart_integration_test();
 	//setup_timer_encoder_mode_integration_test();
+	setup_flash_device();
 	//timer3 = getEncoderTimer();
 	//setup_i2c_master_integration_test();
 	//test_BMP180_Chip_ID_Read();
@@ -59,6 +61,7 @@ int main(void)
 	//led_pwm_burst_operation();
 	//turn_on_all_LEDs_PORTB();
 	//test_tx_send_long_string_circular_mode();
+	test_flash_erase_and_write();
 	while (1) {
 		//capture_tim5_channel_1();
 		//polled_timer_test();
