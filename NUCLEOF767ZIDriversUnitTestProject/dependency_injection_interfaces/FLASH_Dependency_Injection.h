@@ -16,6 +16,10 @@ flash_device getFlashDeviceInstance (void);
 
 void FlashDeviceInstanceCleanUp (void);
 
+void waitForFlashBusy(flash_device device);
+
+void DSB_Instruction (void);
+
 
 
 #endif /* FLASH_DEPENDENCY_INJECTION_H_ */

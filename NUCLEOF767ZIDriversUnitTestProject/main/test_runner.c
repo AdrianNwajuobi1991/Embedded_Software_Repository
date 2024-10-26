@@ -20,6 +20,7 @@
 #include "USARTDriverTest.h"
 #include "DMADriverTest.h"
 #include "TIMERDriverTest.h"
+#include "FLASHDriverTest.h"
 
 static void run_SPI_Test_Group(void);
 static void run_GPIO_Test_Group(void);
@@ -28,6 +29,7 @@ static void run_I2C_Test_Group(void);
 static void run_USART_Test_Group(void);
 static void run_TIMER_Test_Group(void);
 static void run_DMA_Test_Group(void);
+static void run_FLASH_Test_Group (void);
 
 int main(void) {
 	UNITY_BEGIN();
@@ -42,11 +44,25 @@ int main(void) {
 
 	//run_USART_Test_Group();
 
-	run_TIMER_Test_Group();
+	//run_TIMER_Test_Group();
+
+	run_FLASH_Test_Group();
 
 	//run_DMA_Test_Group();
 
 	return UNITY_END();
+}
+
+
+static void run_FLASH_Test_Group (void) {
+	RUN_TEST(test_FLASH_Driver_Default_State);
+	RUN_TEST(test_FLASH_Driver_Unlock_FLASH_Control_Register);
+	RUN_TEST(test_FLASH_Driver_Lock_FLASH_Control_Register);
+	RUN_TEST(test_FLASH_Driver_Progamming_Paralleism);
+	RUN_TEST(test_FLASH_Driver_Sector_2_Erase);
+	RUN_TEST(test_FLASH_Driver_Sector_2_3_4_Erase);
+	RUN_TEST(test_FLASH_Driver_FLASH_Write);
+	RUN_TEST(test_FLASH_Driver_Unlock_FLASH_Option_Register);
 }
 
 static void run_DMA_Test_Group(void) {
