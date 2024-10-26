@@ -27,6 +27,8 @@
 #include "gpio_integration_test.h"
 #include "usart_integration_test.h"
 #include "boot_loader_protocol_suite.h"
+#include "FLASH_Dependency_Injection.h"
+#include "FLASH_Driver.h"
 
 #define FLASH_APP_REGION_START	0x08008000U
 
@@ -37,6 +39,7 @@ static void boot_loader_workflow (void);
 static void bootloader_setup (comms_device_t * commsDevice, usart_device usartDevice);
 
 static comms_device_t commsDevice;
+flash_device flashDevice = 0;
 
 #define BL_RX_LEN  200
 static uint8_t bl_rx_buffer[BL_RX_LEN];
@@ -139,4 +142,8 @@ static void timer_setup (void) {
 static void bootloader_setup (comms_device_t * commsDevice, usart_device usartDevice) {
 	*commsDevice = Comms_Init(INSTANCE_0,usartDevice);
 	Comms_Device_Enable(*commsDevice);
+	flashDevice = getFlashDeviceInstance();
+	unlockFlashControlRegister(flashDevice);
+	setFlashParallelism (flashDevice, X32);
+	flashInterruptConfiguration (flashDevice, ERRIE);
 }

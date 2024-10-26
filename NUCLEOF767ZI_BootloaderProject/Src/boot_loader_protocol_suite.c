@@ -7,6 +7,10 @@
 #include "boot_loader_protocol_suite.h"
 #include "stm32f7xx.h"
 #include "gpio_integration_test.h"
+#include "FLASH_Dependency_Injection.h"
+#include "FLASH_Driver.h"
+#include <string.h>
+#include "gpio_integration_test.h"
 
 #define FLASH_APP_REGION_START	0x08008000U
 #define FLASH_SIZE	2016 * 1024
@@ -16,11 +20,16 @@
 #define APP_ADDR_INVALID		    0x42
 #define FLASH_ERASE_OK				0x51
 #define FLASH_ERASE_ERROR		    0x52
+#define FLASH_WRITE_OK				0x53
+#define FLASH_WRITE_ERROR		    0x54
 
 static bool is_crc_valid (uint8_t * command_packet, uint32_t non_crc_portion_offset, uint32_t crc_expected);
 static void send_ack_sequence(comms_device_t commsDevice, uint8_t length_next_packet);
 static bool run_crc_sequence (uint8_t * command_packet, uint32_t length);
 static uint8_t check_app_address (uint8_t * command_packet, uint32_t length);
+
+extern flash_device flashDevice;
+static volatile uint8_t * flash_app_write_address = (volatile uint8_t *)FLASH_APP_REGION_START;
 
 void bl_get_version (uint8_t * command_packet, comms_device_t commsDevice, uint32_t length) {
 	uint8_t boot_loader_version = BOOT_LOADER_VERSION;
@@ -90,15 +99,54 @@ void bl_flash_erase (uint8_t * command_packet, comms_device_t commsDevice, uint3
 		/*
 		 * TODO: perform the flash erase operation
 		 */
-		flash_erase_status = FLASH_ERASE_OK;
+		uint8_t sectorToErase = (*(command_packet + 2));
+		flashSectorErase (flashDevice, sectorToErase);
+
+		if (checkFlashOperationError (flashDevice, ERSERR) == true) {
+			flash_erase_status = FLASH_ERASE_ERROR;
+		}
+		if (checkFlashOperationError (flashDevice, ERSERR) == false) {
+			flash_erase_status = FLASH_ERASE_OK;
+		}
 		//send the flash erase status to host peer
 		Comms_Device_SendPacket(commsDevice, &flash_erase_status, sizeof(flash_erase_status));
 	}
-
 }
 
 void bl_mem_write (uint8_t * command_packet, comms_device_t commsDevice, uint32_t length) {
 
+	uint8_t flash_write_status = 0;
+	uint8_t flash_write_acknowledge = 0x33;
+	uint8_t code_payload_packet[CODE_PACKET_SIZE];
+	uint32_t number_of_code_payloads = 0;
+	if (run_crc_sequence(command_packet, length) == true) {
+		send_ack_sequence(commsDevice, sizeof(flash_write_status));
+		/*
+		 * TODO: perform the flash write operations
+		 */
+		/* receive the number of code payload packets */
+		Comms_Device_RecvPacket(commsDevice, &number_of_code_payloads, sizeof(number_of_code_payloads));
+		// send the flash write acknowledge to host peer
+		Comms_Device_SendPacket(commsDevice, &flash_write_acknowledge, sizeof(flash_write_acknowledge));
+		// send the starting flash memory pointer to the host
+		Comms_Device_SendPacket(commsDevice, &flash_app_write_address, sizeof(flash_app_write_address));
+		memset(code_payload_packet, 0, sizeof(code_payload_packet));
+		while (number_of_code_payloads > 0) {
+			Comms_Device_RecvPacket(commsDevice, code_payload_packet, sizeof(code_payload_packet));
+			flashWriteData (flashDevice, code_payload_packet, sizeof(code_payload_packet), flash_app_write_address);
+			flash_app_write_address += CODE_PACKET_SIZE;
+			memset(code_payload_packet, 0, CODE_PACKET_SIZE);
+			// send the flash write acknowledge to host peer
+			Comms_Device_SendPacket(commsDevice, &flash_write_acknowledge, sizeof(flash_write_acknowledge));
+			// send the updated flash memory pointer to the host
+			Comms_Device_SendPacket(commsDevice, &flash_app_write_address, sizeof(flash_app_write_address));
+			number_of_code_payloads -= 1;
+		}
+		flash_write_status = FLASH_WRITE_OK;
+		//send the flash write status to host peer
+		Comms_Device_SendPacket(commsDevice, &flash_write_status, sizeof(flash_write_status));
+		flash_app_write_address = (volatile uint8_t *)FLASH_APP_REGION_START;
+	}
 }
 
 void bl_enable_read_write_protect (uint8_t * command_packet, comms_device_t commsDevice, uint32_t length) {
@@ -107,6 +155,7 @@ void bl_enable_read_write_protect (uint8_t * command_packet, comms_device_t comm
 
 void run_application (uint32_t app_address) {
 	turn_off_GREEN_LED_PORTB();
+	lockFlashControlRegister (flashDevice);
 	uint32_t app_msp_base = *(volatile uint32_t *)app_address;
 	__set_MSP(app_msp_base);
 	SCB->VTOR = app_address;

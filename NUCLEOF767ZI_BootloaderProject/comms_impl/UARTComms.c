@@ -32,6 +32,7 @@ void Comms_Device_Disable (comms_device_t comms_device) {
 void Comms_Device_SendPacket(comms_device_t comms_device, void * data, uint32_t numBytes) {
 	hostToProtocolEndiannessConvert(data, numBytes);
 	transmit_packet (comms_device->ud, (uint8_t *)data, numBytes);
+	hostToProtocolEndiannessConvert(data, numBytes);
 }
 
 void Comms_Device_RecvPacket(comms_device_t comms_device, void * recvPacketBuffer, uint32_t numBytes) {
