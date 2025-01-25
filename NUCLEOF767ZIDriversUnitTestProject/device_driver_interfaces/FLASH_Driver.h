@@ -29,6 +29,14 @@ enum {
 	ERRIE=25
 };
 
+enum {
+	LATENCY_7WS = 7
+};
+
+enum  {
+	ART_ENABLE = 1, ART_DISABLE = 0
+};
+
 void flashInterruptConfiguration (flash_device device, uint8_t interruptSetting);
 
 void unlockFlashControlRegister (flash_device device);
@@ -46,6 +54,8 @@ void flashSectorErase (flash_device device, uint8_t sectorNumber);
 void flashWriteData (flash_device device, void * data, uint32_t size, volatile uint8_t * flashMemoryAddress);
 
 bool checkFlashOperationError (flash_device device, uint8_t errorType);
+
+void configureFlashLatencyAndARTSetup(flash_device device, uint8_t latency, uint8_t artSettingFlag);
 
 
 #endif /* FLASH_DRIVER_H_ */
