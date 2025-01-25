@@ -35,6 +35,8 @@ void resetGPIOPinNumberBSRR(gpio_device device, uint16_t pinNumber);
 
 uint32_t readGPIOInputDataRegister(gpio_device device);
 
+uint32_t readGPIOInputPin(gpio_device device, uint8_t pinNumber);
+
 void setGPIOPortValue(gpio_device device, uint16_t portValue);
 
 void resetGPIOPortValue(gpio_device device, uint16_t portValue);
