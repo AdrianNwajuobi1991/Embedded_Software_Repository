@@ -89,6 +89,23 @@ void test_USART_Configure_115200_baud_8DataBits_No_Parity_Bit_1StopBit_16MHZ_Clo
 	TEST_ASSERT_EQUAL_HEX32(0x0000008B, getUSARTDeviceBRRValue(usartDevice2));
 }
 
+void test_USART_Configure_115200_baud_8DataBits_No_Parity_Bit_1StopBit_216MHZ_Clock_16X_Oversampling_No_DMA_No_Interupts (void) {
+
+	USART_Config usartConfig = {0};
+
+	usartConfig.baud_rate = 115200;
+	usartConfig.clock_source_speed = 216000000;
+	usartConfig.oversampling_mode = OVERSAMPLE_16X;
+	usartConfig.use_tx_interrupt = false;
+	usartConfig.use_rx_interrupt = false;
+
+	configureUSARTDevice(usartDevice2, &usartConfig);
+
+	TEST_ASSERT_EQUAL_HEX32(0x00000000, getUSARTDeviceCR1Value(usartDevice2));
+	TEST_ASSERT_EQUAL_HEX32(0x00000000, getUSARTDeviceCR2Value(usartDevice2));
+	TEST_ASSERT_EQUAL_HEX32(0x00000754, getUSARTDeviceBRRValue(usartDevice2));
+}
+
 void test_USART_Configure_115200_baud_8DataBits_No_Parity_Bit_1StopBit_16MHZ_Clock_8X_Oversampling_No_DMA_No_Interupts (void) {
 
 	USART_Config usartConfig = {0};
