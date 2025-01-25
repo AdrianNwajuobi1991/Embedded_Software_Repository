@@ -16,5 +16,6 @@ void test_FLASH_Driver_Sector_2_3_4_Erase (void);
 void test_FLASH_Driver_Progamming_Paralleism (void);
 void test_FLASH_Driver_FLASH_Write (void);
 void test_FLASH_Driver_Unlock_FLASH_Option_Register (void);
+void test_FLASH_Driver_LATENCY_7WS_ART_ENABLE (void);
 
 #endif /* FLASHDRIVERTEST_H_ */

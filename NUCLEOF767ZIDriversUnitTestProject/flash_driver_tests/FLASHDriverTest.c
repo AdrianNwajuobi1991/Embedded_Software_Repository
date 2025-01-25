@@ -58,7 +58,12 @@ void test_FLASH_Driver_Progamming_Paralleism (void) {
 }
 
 void test_FLASH_Driver_FLASH_Write (void) {
-	flashWriteData(flashDevice, (void *)0, 200, (uint32_t *)0);
+	flashWriteData(flashDevice, (void *)0, 200, (uint8_t *)0);
 	TEST_ASSERT_EQUAL_HEX32(0x80000001, getFlashCRRValue(flashDevice));
+}
+
+void test_FLASH_Driver_LATENCY_7WS_ART_ENABLE (void) {
+	configureFlashLatencyAndARTSetup(flashDevice, LATENCY_7WS, ART_ENABLE);
+	TEST_ASSERT_EQUAL_HEX32(0x00000207, getFlashACRRValue(flashDevice));
 }
 
