@@ -38,6 +38,10 @@ uint32_t readGPIOInputDataRegister(gpio_device device) {
 	return registerGetMaskBits(&device->IDR, 0xFFFF);
 }
 
+uint32_t readGPIOInputPin(gpio_device device, uint8_t pinNumber) {
+	return (device->IDR & (1 << pinNumber));
+}
+
 void setGPIOPinNumberBSRR(gpio_device device, uint16_t pinNumber) {
 	registerSetBit(&device->BSRR, pinNumber);
 }
