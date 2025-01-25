@@ -22,6 +22,12 @@
 #include "FLASH_Dependency_Injection.h"
 #include "TIMER_Driver.h"
 #include "TIMER_Dependency_Injection.h"
+#include "RCC_Driver.h"
+#include "RCC_Dependency_Injection.h"
+#include "PWRControlDriver.h"
+#include "PWRControl_Dependency_Injection.h"
+#include "RTC_Driver.h"
+#include "RTC_Driver_Dependency_Injection.h"
 
 spi_device spiDevice;
 gpio_device gpioDevicePORTA;
@@ -33,6 +39,9 @@ dma_stream_device dmaStream;
 dma_device dmaDevice;
 flash_device flashDevice;
 timer_device timerDevice;
+rcc_device rccDevice;
+power_control_device powerControlDevice;
+rtc_device rtcDevice;
 
 
 void setUp (void) {
@@ -46,6 +55,9 @@ void setUp (void) {
 	dmaDevice = getDMADeviceInstance(DMA_1);
 	flashDevice = getFlashDeviceInstance();
 	timerDevice = getTimerDeviceInstance(TIM_1);
+	rccDevice = getRCCDeviceInstance();
+	powerControlDevice = getPowerControlDeviceInstance();
+	rtcDevice = getRTCDeviceInstance();
 }
 
 void tearDown (void) {
@@ -59,5 +71,8 @@ void tearDown (void) {
 	DMADeviceCleanUp(dmaDevice);
 	FlashDeviceInstanceCleanUp();
 	TimerDeviceInstanceCleanUp(timerDevice, (PWM_TIMER_Config *)0);
+	RCC_DeviceInstanceCleanUp();
+	PowerControlDeviceInstanceCleanUp();
+	RTCDeviceInstanceCleanUp();
 }
 
