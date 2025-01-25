@@ -31,6 +31,8 @@ void initialize_USART2_Device (void);
 
 void initialize_USART3_Device (void);
 
+void initialize_USART3_Device (void);
+
 void initialize_USART5_Device (void);
 
 
