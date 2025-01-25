@@ -96,3 +96,12 @@ bool checkFlashOperationError (flash_device device, uint8_t errorType) {
 	}
 	return false;
 }
+
+void configureFlashLatencyAndARTSetup(flash_device device, uint8_t latency, uint8_t artSettingFlag) {
+	waitForFlashBusy(device);
+	registerClearValueInBitPosition (&device->ACR, 0xFFFF, 0);
+	registerClearValueInBitPosition (&device->ACR, 0x1, 9);
+	registerSetValueInBitPosition (&device->ACR, latency, 0);
+	registerSetValueInBitPosition (&device->ACR, artSettingFlag, 9);
+	waitForFlashBusy(device);
+}
