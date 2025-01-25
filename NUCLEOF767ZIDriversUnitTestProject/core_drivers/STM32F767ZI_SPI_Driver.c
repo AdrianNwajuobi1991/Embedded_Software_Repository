@@ -88,15 +88,17 @@ static void configure_spi_byte_order (spi_device device, SPI_Config * configOpti
 static void configure_spi_slave_management (spi_device device, SPI_Config * configOptions) {
 	//set SSM
 	if (configOptions->slave_mangement_mode == HARDWARE_SLAVE_MANAGEMENT) {
-		// set SSM bit to Zero to indicate non-software management of slave
+		// set SSM bit to Zero to indicate non-software management this MCU as slave
 		registerClearBit(&device->CR1, SSM_BITPOS);
 		if (configOptions->spi_device_role == SPI_MASTER) {
-			// set SSOE bit to high to enable pulling low or high the NSS line
+			// set SSOE bit to high to enable pulling low or high the NSS line.
+			// this is done to make sure this MCU is not operated as a slave device when
+			// hardware slave management is enabled
 			registerSetBit(&device->CR2, SSOE_BITPOS);
 		}
 	}
 	if (configOptions->slave_mangement_mode == SOFTWARE_SLAVE_MANAGEMENT) {
-		// set SSM bit to 1 to indicate software slave management is active
+		// set SSM bit to 1 to indicate software slave management of this MCU slave is active
 		registerSetBit(&device->CR1, SSM_BITPOS);
 		if (configOptions->spi_device_role == SPI_MASTER) {
 			registerSetBit(&device->CR1, SSI_BITPOS);
@@ -109,7 +111,8 @@ static void configure_spi_transciever (spi_device device, SPI_Config * configOpt
 	if (configOptions->spi_device_role == SPI_MASTER) {
 		if (configOptions->spi_baud_rate == DEFAULT_PCLK_DIV16) {
 			registerSetValueInBitPosition (&device->CR1, 3, BR_BITPOS);
-		}else if (configOptions->spi_baud_rate == DEFAULT_PCLK_DIV8) {
+		}
+		if (configOptions->spi_baud_rate == DEFAULT_PCLK_DIV8) {
 			registerSetValueInBitPosition (&device->CR1, 2, BR_BITPOS);
 		}
 	}
